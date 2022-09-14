@@ -4,6 +4,8 @@ A Docker based anonymity solution that implements basic functionalities of onion
 
 Written as part of the Advanced Internet Computing Lab, SoSe 2022, held at [TUHH](https://www.tuhh.de/ide/homepage.html).
 
+A Go version of this onion router which runs only locally (and has slightly different directory node communication) can be found [here](https://github.com/MichelKrispin/GoOnionRouter).
+
 ## Overview
 
 - Get the project up and running -> [Look here](#up-and-running)
