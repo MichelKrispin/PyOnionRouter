@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Onion Router Dashboard</title>
+    <meta name="description" content="description" />
+    <meta name="author" content="author" />
+    <meta name="keywords" content="keywords" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <section class="section">
+      <div class="container">
+        <div class="columns">
+          <div class="column">
+            <article class="panel">
+              <div class="panel-heading has-text-centered">
+                <h1 class="title">Onion Router Dashboard</h1>
+              </div>
+              <div class="box">
+                <div class="content has-text-centered">
+                  <div class="columns">
+                    <div class="column is-1">
+                      <div
+                        class="button is-outlined is-rounded"
+                        id="connect-to-service"
+                      >
+                        Connect
+                      </div>
+                    </div>
+
+                    <div class="column">
+                      <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                          <label class="label">Service</label>
+                        </div>
+                        <div class="field-body">
+                          <div class="field">
+                            <div class="control">
+                              <input
+                                id="service-url"
+                                class="input"
+                                type="text"
+                                placeholder="Service Node URL"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="column">
+                      <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                          <label class="label">Directory</label>
+                        </div>
+                        <div class="field-body">
+                          <div class="field">
+                            <div class="control">
+                              <input
+                                id="directory-url"
+                                class="input"
+                                type="text"
+                                placeholder="Directory Node URL"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="column is-2">
+                      <div class="field is-horizontal">
+                        <div class="field-label is-normal">
+                          <label class="label">Speed</label>
+                        </div>
+                        <div class="field-body">
+                          <div class="field">
+                            <div class="control">
+                              <div class="select">
+                                <select id="speed">
+                                  <option>0.1</option>
+                                  <option>0.25</option>
+                                  <option selected>0.5</option>
+                                  <option>0.75</option>
+                                  <option>1</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="block">
+                <div id="loader" class="loader" style="display: none"></div>
+                <div id="first-result" class="box" style="display: none"></div>
+                <div id="dashboard"></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+
+  <script src="two.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script>
+    // Adding hover effect to button
+    $('#connect-to-service').on('mouseover', function () {
+      $('#connect-to-service').addClass('is-dark').removeClass('is-outlined');
+    });
+    $('#connect-to-service').on('mouseout', function () {
+      $('#connect-to-service').addClass('is-outlined').removeClass('is-dark');
+    });
+
+    const public_key = `{{ public_key }}`;
+    // console.log(public_key);
+
+    const speed = [0.1, 0.25, 0.5, 0.75, 1.0];
+    let route;
+    $('#connect-to-service').click(function () {
+      const url = document.getElementById('service-url').value;
+      const directoryUrl = document.getElementById('directory-url').value;
+      document.getElementById('loader').style = 'display: block';
+      $.ajax({
+        type: 'POST',
+        url: directoryUrl + '/route',
+        contentType: 'application/json',
+        dataType: 'json',
+        data: JSON.stringify({ public_key: public_key }),
+        success: function (data) {
+          document.getElementById('loader').style.borderTop =
+            '16px solid #63db34';
+          if (!('tracking_id' in data) || !('route' in data)) {
+            alert('Error while asking the Directory Node for a route!');
+            return;
+          }
+
+          $.ajax({
+            type: 'POST',
+            url: '/connect',
+            contentType: 'application/json',
+            dataType: 'json',
+            data: JSON.stringify({ service: url, route: data['route'] }),
+            success: function (connectData) {
+              if (!connectData['status']) {
+                alert(connectData['error']);
+                return;
+              }
+
+              // Show some rudimentary information
+              document.getElementById('loader').style = 'display: none';
+              document.getElementById('loader').style.borderTop =
+                '16px solid #3498db';
+              document.getElementById('first-result').style = 'display: block';
+              document.getElementById('first-result').innerHTML =
+                '<ol class="box"><li>' +
+                data['route'].join('</li><li>') +
+                '</li></ol><p class="box">' +
+                connectData['data']['result'] +
+                '</p>';
+
+              // Call the check function only if everything is fine
+              $.ajax({
+                type: 'POST',
+                url: directoryUrl + '/check',
+                data: JSON.stringify({ tracking_id: data['tracking_id'] }),
+                dataType: 'json',
+                contentType: 'application/json',
+                crossDomain: true,
+                success: function (d) {
+                  animateRouter(
+                    data['route'],
+                    connectData['data']['result'],
+                    speed[document.getElementById('speed').selectedIndex]
+                  );
+                },
+                error: function (responseData) {
+                  console.log(responseData);
+                  if (responseData.responseText) {
+                    const error = JSON.parse(responseData.responseText).error;
+                    console.warn(error);
+                    alert(`Error: ${error}`);
+                  } else {
+                    console.warn(responseData.statusText);
+                    alert(`Error: ${responseData.statusText}`);
+                  }
+                },
+              });
+            },
+          });
+        },
+        error: function (responseData) {
+          document.getElementById('loader').style = 'display: none';
+          console.log(responseData);
+          if (responseData.responseText) {
+            const error = responseData.responseText;
+            console.warn(error);
+            alert(`Error: ${error}`);
+          } else {
+            console.warn(responseData.statusText);
+            alert(`Error: ${responseData.statusText}`);
+          }
+        },
+      });
+    });
+  </script>
+
+  <script src="main.js"></script>
+</html>

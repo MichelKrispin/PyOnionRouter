@@ -1,0 +1,66 @@
+participantgroup #lightgreen
+participant Client
+end
+participantgroup #lightblue
+participant Directory Node
+end
+participantgroup #lightyellow
+participant Node 1
+participant Node 2
+participant Node 3
+end
+participantgroup #cyan
+participant Service
+end
+
+Client->Directory Node:<background:#white>Send PK</background>
+
+group Instantiation
+Directory Node->Node 1:<background:#white>Create with PK</background>
+Directory Node->Node 2:<background:#white>Create with PK</background>
+Directory Node->Node 3:<background:#white>Create with PK</background>
+end
+
+Client<--Directory Node:<background:#white>Route</background>
+
+group Public Key transfer
+Client->Node 1: <background:#white>Ask for PK</background> 
+Client->Node 2: <background:#white>Ask for PK</background> 
+Client->Node 3: <background:#white>Ask for PK</background> 
+Client<--Node 1: <background:#white>Return PK</background>
+Client<--Node 2: <background:#white>Return PK</background>
+Client<--Node 3: <background:#white>Return PK</background>
+end
+
+Client->Client:<background:#white>Wrap request</background>
+Client->Directory Node:<background:#white>Check request</background>
+activate Directory Node
+deactivateafter Directory Node
+
+group Sending
+linear 
+Client->Node 1: <background:#white>Send wrapped request</background>
+Node 1->Node 2: <background:#white>Unwrap</background>
+Node 2->Node 3: <background:#white>Unwrap</background>
+Node 3->Service: <background:#white>Unwrap</background>
+linear off
+
+Node 1->Directory Node: <background:#white>Notify correct</background>
+Node 2->Directory Node: <background:#white>Notify correct</background>
+Node 3->Directory Node: <background:#white>Notify correct</background>
+
+linear
+Service->Node 3: <background:#white>Response</background>
+Node 3->Node 2: <background:#white>Wrap</background>
+Node 2->Node 1: <background:#white>Wrap</background>
+Node 1->Client: <background:#white>Send wrapped response</background>
+linear off
+Node 3->Directory Node: <background:#white>Notify correct</background>
+Node 2->Directory Node: <background:#white>Notify correct</background>
+Node 1->Directory Node: <background:#white>Notify correct</background>
+end
+
+Client<--Directory Node:<background:#white>Correct? </background>
+Client->(0)Client: <background:#white>Unwrap</background>
+
+
